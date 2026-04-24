@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+temp_audio.wav
+data/resumes/*.pdf
+data/videos/*.mp4
+output/*.json
+output/reports/*.pdf
+.gitkeep
