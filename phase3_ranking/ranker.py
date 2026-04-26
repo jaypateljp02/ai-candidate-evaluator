@@ -190,7 +190,7 @@ class CandidateReportPDF(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 10)
         self.set_text_color(120, 120, 120)
-        self.cell(0, 8, "AI Candidate Evaluator — Confidential Report", align="R", ln=True)
+        self.cell(0, 8, "AI Candidate Evaluator - Confidential Report", align="R", ln=True)
         self.line(10, self.get_y(), 200, self.get_y())
         self.ln(3)
 
@@ -284,7 +284,7 @@ def generate_pdf_report(ranked_candidates):
         pdf.set_font("Helvetica", size=10)
         pdf.set_text_color(0, 0, 0)
         for tier, stats in cluster_summary.items():
-            pdf.cell(0, 7, f"{tier}: {stats['count']} candidate(s) — Avg Score: {stats['avg_final']}/100", ln=True)
+            pdf.cell(0, 7, f"{tier}: {stats['count']} candidate(s) - Avg Score: {stats['avg_final']}/100", ln=True)
         pdf.ln(5)
 
     # ── Detailed Candidate Sections ──
