@@ -12,9 +12,13 @@ import sys
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+import plotly.express as px
+import pandas as pd
+
 from phase1_resume.resume_parser import parse_resume
 from phase2_video.video_evaluator import evaluate_video
 from phase3_ranking.ranker import run_ranking, load_all_candidates, rank_candidates, generate_pdf_report
+from phase3_ranking.clustering import get_cluster_summary, TIER_EMOJIS, TIER_COLORS
 
 # ──────────────────────────────────────────────
 # Page Config & Custom CSS
@@ -431,7 +435,7 @@ elif page == "📄 Evaluate Candidate":
 
 elif page == "🏆 All Rankings":
     st.markdown("# 🏆 Candidate Rankings")
-    st.markdown("All evaluated candidates ranked by their composite AI score.")
+    st.markdown("All evaluated candidates ranked by composite AI score with ML-based tier classification.")
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
     candidates = load_all_candidates()
@@ -448,7 +452,7 @@ elif page == "🏆 All Rankings":
         ranked = rank_candidates(candidates)
 
         # Summary metrics
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.markdown(f"""
             <div class="metric-card" style="text-align:center;">
@@ -472,21 +476,67 @@ elif page == "🏆 All Rankings":
                 <div style="font-size: 2em; font-weight: 700; color: #2ecc71;">{top_score}</div>
             </div>
             """, unsafe_allow_html=True)
+        with col4:
+            # Tier distribution
+            tier_counts = {}
+            for c in ranked:
+                t = c.get('tier', 'N/A')
+                tier_counts[t] = tier_counts.get(t, 0) + 1
+            tier_text = " · ".join([f"{TIER_EMOJIS.get(t, '⚪')}{v}" for t, v in tier_counts.items()])
+            st.markdown(f"""
+            <div class="metric-card" style="text-align:center;">
+                <div style="color: rgba(255,255,255,0.5);">Tier Distribution</div>
+                <div style="font-size: 1.2em; font-weight: 700; margin-top: 8px;">{tier_text}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Cluster scatter chart (only if 2+ candidates)
+        if len(ranked) >= 2:
+            st.markdown("### 📊 Candidate Clusters (K-Means)")
+            chart_data = pd.DataFrame([{
+                "Name": c["name"],
+                "Resume Score": c["resume_score"],
+                "Video Score": c["video_score"],
+                "Final Score": c["final_score"],
+                "Tier": c.get("tier", "N/A"),
+                "Experience": c.get("experience_years", 0)
+            } for c in ranked])
+
+            fig = px.scatter(
+                chart_data, x="Resume Score", y="Video Score",
+                color="Tier", size="Final Score",
+                hover_name="Name", hover_data=["Experience", "Final Score"],
+                color_discrete_map=TIER_COLORS,
+                template="plotly_dark"
+            )
+            fig.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                font_color="white",
+                height=400
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("")
 
-        # Candidate cards
+        # Candidate cards with tier badges, keywords, sentiment
         for candidate in ranked:
             score_class = get_score_class(candidate['final_score'])
+            tier = candidate.get('tier', 'N/A')
+            tier_emoji = TIER_EMOJIS.get(tier, '⚪')
+            tier_color = TIER_COLORS.get(tier, '#888')
 
-            # Medal emoji for top 3
             medal = ""
-            if candidate['rank'] == 1:
-                medal = "🥇"
-            elif candidate['rank'] == 2:
-                medal = "🥈"
-            elif candidate['rank'] == 3:
-                medal = "🥉"
+            if candidate['rank'] == 1: medal = "🥇"
+            elif candidate['rank'] == 2: medal = "🥈"
+            elif candidate['rank'] == 3: medal = "🥉"
+
+            # Keywords and sentiment
+            keywords = candidate.get('keywords', [])
+            keywords_html = " ".join([f'<span class="tech-badge">{k}</span>' for k in keywords[:6]]) if keywords else '<span style="color:rgba(255,255,255,0.3);">No keywords</span>'
+            
+            sent_label = candidate.get('sentiment_label', 'No Data')
+            sent_emoji = "😊" if sent_label == "Positive" else "😐" if sent_label == "Neutral" else "😟" if sent_label == "Negative" else "—"
 
             st.markdown(f"""
             <div class="rank-card">
@@ -495,8 +545,10 @@ elif page == "🏆 All Rankings":
                         {medal} #{candidate['rank']}
                     </div>
                     <div style="flex: 1; min-width: 200px;">
-                        <div style="font-size: 1.2em; font-weight: 600;">{candidate['name']}</div>
-                        <div style="color: rgba(255,255,255,0.5); font-size: 0.9em;">{candidate['email']} · {candidate['experience_years']} yrs exp · {candidate['skills_count']} skills</div>
+                        <div style="font-size: 1.2em; font-weight: 600;">{candidate['name']}
+                            <span style="background:{tier_color}; color:white; padding:2px 10px; border-radius:20px; font-size:0.7em; margin-left:8px;">{tier_emoji} {tier}</span>
+                        </div>
+                        <div style="color: rgba(255,255,255,0.5); font-size: 0.9em;">{candidate['email']} · {candidate['experience_years']} yrs exp · {candidate['skills_count']} skills · Sentiment: {sent_emoji} {sent_label}</div>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <div class="score-badge {score_class}">Final: {candidate['final_score']}</div>
@@ -510,7 +562,8 @@ elif page == "🏆 All Rankings":
                         </div>
                     </div>
                 </div>
-                <div style="margin-top: 10px; color: rgba(255,255,255,0.6); font-size: 0.9em; font-style: italic;">
+                <div style="margin-top: 10px;">{keywords_html}</div>
+                <div style="margin-top: 8px; color: rgba(255,255,255,0.6); font-size: 0.9em; font-style: italic;">
                     {candidate['summary']}
                 </div>
             </div>
@@ -557,13 +610,14 @@ elif page == "📊 Generate Report":
         with st.expander("📝 What's in the report?"):
             st.markdown("""
             The PDF report includes:
-            - **Summary Table** — Quick overview of all candidates ranked by score
+            - **Summary Table** — All candidates ranked with scores and ML tier classification
+            - **Cluster Analysis** — K-Means grouping into Strong Hire / Potential / Needs Review
             - **Detailed Profiles** — Per-candidate breakdown with:
-                - Contact information
                 - Resume score, video score, and final composite score
+                - Top keywords extracted via TF-IDF (NLP)
+                - Sentiment analysis of video transcript (VADER)
                 - Skills, strengths, and areas for improvement
-                - Communication assessment from video interview
-                - Overall AI-generated summary
+                - Communication assessment and AI-generated summary
             """)
 
         if st.button("📥 Generate & Download Report", use_container_width=True, type="primary"):

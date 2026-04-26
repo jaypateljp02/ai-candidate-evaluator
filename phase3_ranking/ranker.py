@@ -1,7 +1,8 @@
 """
 Phase 3 — Candidate Ranking & PDF Report Generation
-Loads all evaluated candidates, calculates weighted final scores,
-ranks them, and generates professional PDF reports.
+Loads all evaluated candidates, extracts NLP features, calculates weighted
+final scores, applies ML clustering for tier classification, and generates
+professional PDF reports.
 """
 
 import json
@@ -9,6 +10,12 @@ import os
 import pandas as pd
 from fpdf import FPDF
 from datetime import datetime
+
+from utils.nlp_features import extract_keywords_tfidf, analyze_sentiment
+from phase3_ranking.clustering import (
+    cluster_candidates, get_cluster_summary,
+    TIER_EMOJIS, TIER_COLORS
+)
 
 
 # ──────────────────────────────────────────────
@@ -72,7 +79,6 @@ def calculate_final_score(resume_data, video_data):
     """
     resume_score = resume_data.get("overall_resume_score", 0)
 
-    # Ensure score is numeric
     try:
         resume_score = float(resume_score)
     except (TypeError, ValueError):
@@ -95,14 +101,17 @@ def calculate_final_score(resume_data, video_data):
 
 
 # ──────────────────────────────────────────────
-# Ranking
+# Ranking (with NLP + ML)
 # ──────────────────────────────────────────────
 
 def rank_candidates(candidates):
     """Rank all candidates by their final composite score.
 
+    Also extracts NLP features (TF-IDF keywords, sentiment) and
+    applies K-Means clustering for tier classification.
+
     Returns:
-        list: Sorted list of candidate dicts with rank field added
+        list: Sorted list of candidate dicts with rank, NLP features, and tier
     """
     ranked = []
 
@@ -116,12 +125,23 @@ def rank_candidates(candidates):
         video_score = 0
         communication = "N/A"
         transcript_summary = "No video evaluated"
+        transcript_text = ""
 
         if video and "evaluation" in video:
             eval_data = video["evaluation"]
             video_score = eval_data.get("communication_score", 0)
             communication = eval_data.get("confidence", "N/A")
             transcript_summary = eval_data.get("summary", "N/A")
+            transcript_text = video.get("transcript", "")
+
+        # ── NLP Feature Extraction ──
+
+        # TF-IDF keywords from resume summary + skills
+        resume_text = resume.get("summary", "") + " " + " ".join(resume.get("skills", []))
+        keywords = extract_keywords_tfidf(resume_text)
+
+        # Sentiment analysis on video transcript
+        sentiment = analyze_sentiment(transcript_text)
 
         ranked.append({
             "candidate_id": candidate_id,
@@ -139,7 +159,12 @@ def rank_candidates(candidates):
             "strengths": ", ".join(resume.get("strengths", [])),
             "weaknesses": ", ".join(resume.get("weaknesses", [])),
             "summary": resume.get("summary", "N/A"),
-            "transcript_summary": transcript_summary
+            "transcript_summary": transcript_summary,
+            # NLP features
+            "keywords": keywords,
+            "sentiment": sentiment,
+            "sentiment_compound": sentiment.get("compound", 0.0),
+            "sentiment_label": sentiment.get("label", "No Data"),
         })
 
     # Sort by final score (highest first)
@@ -148,6 +173,9 @@ def rank_candidates(candidates):
     # Assign ranks
     for i, candidate in enumerate(ranked):
         candidate["rank"] = i + 1
+
+    # ── ML Clustering ──
+    ranked = cluster_candidates(ranked)
 
     return ranked
 
@@ -175,6 +203,8 @@ class CandidateReportPDF(FPDF):
 
 def generate_pdf_report(ranked_candidates):
     """Generate a professionally formatted PDF evaluation report.
+
+    Includes NLP keywords, sentiment analysis, and ML tier classification.
 
     Args:
         ranked_candidates: List of ranked candidate dicts
@@ -204,6 +234,7 @@ def generate_pdf_report(ranked_candidates):
     pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%d %B %Y, %I:%M %p')}", ln=True, align="C")
     pdf.cell(0, 8, f"Total Candidates Evaluated: {len(ranked_candidates)}", ln=True, align="C")
     pdf.cell(0, 8, "Scoring: Resume (60%) + Video Interview (40%)", ln=True, align="C")
+    pdf.cell(0, 8, "Methodology: LLM Analysis + NLP (TF-IDF, Sentiment) + ML (K-Means Clustering)", ln=True, align="C")
     pdf.ln(15)
 
     # ── Summary Table ──
@@ -213,55 +244,71 @@ def generate_pdf_report(ranked_candidates):
     pdf.ln(3)
 
     # Table header
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font("Helvetica", "B", 8)
     pdf.set_fill_color(41, 128, 185)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(15, 8, "Rank", fill=True, align="C")
-    pdf.cell(55, 8, "Candidate", fill=True, align="C")
-    pdf.cell(35, 8, "Final Score", fill=True, align="C")
-    pdf.cell(35, 8, "Resume", fill=True, align="C")
-    pdf.cell(35, 8, "Video", fill=True, align="C")
+    pdf.cell(12, 8, "Rank", fill=True, align="C")
+    pdf.cell(40, 8, "Candidate", fill=True, align="C")
+    pdf.cell(25, 8, "Final", fill=True, align="C")
+    pdf.cell(25, 8, "Resume", fill=True, align="C")
+    pdf.cell(25, 8, "Video", fill=True, align="C")
+    pdf.cell(30, 8, "Tier", fill=True, align="C")
+    pdf.cell(25, 8, "Sentiment", fill=True, align="C")
     pdf.ln()
 
     # Table rows
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Helvetica", size=9)
+    pdf.set_font("Helvetica", size=8)
     for i, c in enumerate(ranked_candidates):
         bg = (245, 248, 255) if i % 2 == 0 else (255, 255, 255)
         pdf.set_fill_color(*bg)
-        pdf.cell(15, 7, f"#{c['rank']}", fill=True, align="C")
-        pdf.cell(55, 7, str(c['name'])[:30], fill=True)
-        pdf.cell(35, 7, f"{c['final_score']}/100", fill=True, align="C")
-        pdf.cell(35, 7, f"{c['resume_score']}/100", fill=True, align="C")
-        pdf.cell(35, 7, f"{c['video_score']}/100", fill=True, align="C")
+        pdf.cell(12, 7, f"#{c['rank']}", fill=True, align="C")
+        pdf.cell(40, 7, str(c['name'])[:22], fill=True)
+        pdf.cell(25, 7, f"{c['final_score']}/100", fill=True, align="C")
+        pdf.cell(25, 7, f"{c['resume_score']}/100", fill=True, align="C")
+        pdf.cell(25, 7, f"{c['video_score']}/100", fill=True, align="C")
+        pdf.cell(30, 7, c.get('tier', 'N/A'), fill=True, align="C")
+        pdf.cell(25, 7, c.get('sentiment_label', 'N/A'), fill=True, align="C")
         pdf.ln()
 
     pdf.ln(5)
+
+    # ── Cluster Summary ──
+    cluster_summary = get_cluster_summary(ranked_candidates)
+    if cluster_summary:
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.set_text_color(41, 128, 185)
+        pdf.cell(0, 10, "Cluster Analysis (K-Means)", ln=True)
+        pdf.ln(3)
+
+        pdf.set_font("Helvetica", size=10)
+        pdf.set_text_color(0, 0, 0)
+        for tier, stats in cluster_summary.items():
+            pdf.cell(0, 7, f"{tier}: {stats['count']} candidate(s) — Avg Score: {stats['avg_final']}/100", ln=True)
+        pdf.ln(5)
 
     # ── Detailed Candidate Sections ──
     for candidate in ranked_candidates:
         pdf.add_page()
 
-        # Candidate header
+        # Candidate header with tier
+        tier = candidate.get('tier', 'N/A')
         pdf.set_fill_color(41, 128, 185)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 12, f"  #{candidate['rank']}  {candidate['name']}", fill=True, ln=True)
+        pdf.cell(0, 12, f"  #{candidate['rank']}  {candidate['name']}  [{tier}]", fill=True, ln=True)
         pdf.ln(5)
 
         # Score boxes
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 11)
 
-        # Final score (green)
         pdf.set_fill_color(39, 174, 96)
         pdf.cell(58, 10, f"Final: {candidate['final_score']}/100", fill=True, align="C")
         pdf.cell(3, 10, "")
-        # Resume score (blue)
         pdf.set_fill_color(52, 152, 219)
         pdf.cell(58, 10, f"Resume: {candidate['resume_score']}/100", fill=True, align="C")
         pdf.cell(3, 10, "")
-        # Video score (purple)
         pdf.set_fill_color(155, 89, 182)
         pdf.cell(58, 10, f"Video: {candidate['video_score']}/100", fill=True, align="C")
         pdf.ln(15)
@@ -275,6 +322,17 @@ def generate_pdf_report(ranked_candidates):
         pdf.cell(0, 6, f"Email: {candidate['email']}     |     Phone: {candidate.get('phone', 'N/A')}", ln=True)
         pdf.cell(0, 6, f"Education: {candidate['education']}     |     Experience: {candidate['experience_years']} years", ln=True)
         pdf.ln(3)
+
+        # NLP Keywords
+        keywords = candidate.get("keywords", [])
+        if keywords:
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(41, 128, 185)
+            pdf.cell(0, 7, "Top Keywords (TF-IDF)", ln=True)
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("Helvetica", size=10)
+            pdf.cell(0, 6, ", ".join(keywords), ln=True)
+            pdf.ln(3)
 
         # Skills
         pdf.set_font("Helvetica", "B", 11)
@@ -300,6 +358,17 @@ def generate_pdf_report(ranked_candidates):
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Helvetica", size=10)
         pdf.multi_cell(0, 6, candidate.get("weaknesses", "N/A") if candidate.get("weaknesses") else "N/A")
+        pdf.ln(3)
+
+        # Sentiment Analysis
+        sentiment = candidate.get("sentiment", {})
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(155, 89, 182)
+        pdf.cell(0, 7, "Sentiment Analysis (VADER)", ln=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Helvetica", size=10)
+        pdf.cell(0, 6, f"Overall: {candidate.get('sentiment_label', 'N/A')} (compound: {sentiment.get('compound', 0)})", ln=True)
+        pdf.cell(0, 6, f"Positive: {sentiment.get('positive', 0)}  |  Neutral: {sentiment.get('neutral', 0)}  |  Negative: {sentiment.get('negative', 0)}", ln=True)
         pdf.ln(3)
 
         # Communication
@@ -345,7 +414,8 @@ def run_ranking():
 
     print("\n🏆 === FINAL RANKINGS ===")
     for c in ranked:
-        print(f"  #{c['rank']} | {c['name']} | Final Score: {c['final_score']}/100")
+        tier_emoji = TIER_EMOJIS.get(c.get('tier', ''), '⚪')
+        print(f"  #{c['rank']} | {c['name']} | {c['final_score']}/100 | {tier_emoji} {c.get('tier', 'N/A')}")
 
     report_path = generate_pdf_report(ranked)
     print(f"\n✅ Done! Report at: {report_path}")

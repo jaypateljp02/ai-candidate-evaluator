@@ -111,10 +111,11 @@ ai_candidate_evaluator/
 - Returns: communication score (0–100), confidence level, clarity, key points, and summary
 
 ### Phase 3 — Ranking & Reporting
-- Loads all evaluated candidates from JSON output files
+- **NLP Feature Extraction**: TF-IDF keyword extraction from resume text, VADER sentiment analysis on video transcripts
+- **ML Clustering**: K-Means algorithm groups candidates into tiers — "Strong Hire", "Potential", "Needs Review"
 - Calculates final score: **60% resume + 40% video** (if video exists)
-- Ranks candidates by final score
-- Generates a professionally formatted PDF report
+- Ranks candidates by final score with tier classification
+- Generates a professionally formatted PDF report with all insights
 
 ---
 
@@ -130,6 +131,24 @@ ai_candidate_evaluator/
 
 ---
 
+## 🧠 NLP & ML Methodology
+
+### NLP — TF-IDF Keyword Extraction
+- Uses `scikit-learn`'s `TfidfVectorizer` to extract the most important keywords from resume text
+- Helps identify which skills and terms stand out most for each candidate
+
+### NLP — Sentiment Analysis (VADER)
+- Uses `nltk`'s VADER to analyze the tone of video interview transcripts
+- Returns positive/negative/neutral scores and an overall compound score
+- Helps differentiate candidates with similar communication scores
+
+### ML — K-Means Clustering
+- Builds a feature matrix from: resume score, video score, experience, skills count, sentiment
+- Applies K-Means clustering (scikit-learn) to group candidates into 3 tiers
+- Tier labels assigned based on average final score per cluster
+
+---
+
 ## 🛠️ Tech Stack
 
 | Technology     | Purpose                          |
@@ -140,9 +159,11 @@ ai_candidate_evaluator/
 | OpenAI Whisper | Speech-to-text transcription     |
 | pdfplumber     | PDF text extraction              |
 | FFmpeg         | Audio extraction from video      |
+| scikit-learn   | TF-IDF, K-Means clustering       |
+| NLTK (VADER)   | Sentiment analysis               |
+| Plotly         | Interactive data visualization   |
 | fpdf2          | PDF report generation            |
-| pandas         | Data manipulation                |
-| scikit-learn   | ML utilities                     |
+| pandas / numpy | Data manipulation                |
 | python-dotenv  | Environment variable management  |
 
 ---

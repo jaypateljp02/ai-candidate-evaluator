@@ -3,8 +3,10 @@ groq
 openai-whisper
 moviepy
 pandas
+numpy
 scikit-learn
 nltk
 fpdf2
 streamlit
 python-dotenv
+plotly
