@@ -9,6 +9,7 @@ from groq import Groq
 import json
 import os
 from dotenv import load_dotenv
+from utils.helpers import safe_json_parse, save_json
 
 load_dotenv()
 
@@ -68,9 +69,7 @@ Resume:
             temperature=0.3
         )
         raw = response.choices[0].message.content.strip()
-        # Clean markdown code fences if present
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        result = json.loads(raw)
+        result = safe_json_parse(raw)
 
         # Validate required fields
         required_fields = ["name", "skills", "overall_resume_score", "summary"]
@@ -92,9 +91,8 @@ def save_candidate(result, candidate_id):
     """Save candidate resume analysis to a JSON file."""
     os.makedirs("output", exist_ok=True)
     path = f"output/{candidate_id}_resume.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=2, ensure_ascii=False)
-    print(f"✅ Resume analysis saved to {path}")
+    save_json(result, path)
+    print(f"Resume analysis saved to {path}")
     return path
 
 
@@ -108,20 +106,20 @@ def parse_resume(pdf_path, candidate_id=None):
     Returns:
         dict: Structured candidate analysis data, or None on failure
     """
-    print(f"📄 Parsing resume: {pdf_path}")
+    print(f"Parsing resume: {pdf_path}")
 
     # Extract text
     text = extract_text_from_pdf(pdf_path)
     if not text:
-        print("❌ Could not extract text from PDF")
+        print("Could not extract text from PDF")
         return None
 
-    print(f"📝 Extracted {len(text)} characters from PDF")
+    print(f"Extracted {len(text)} characters from PDF")
 
     # AI analysis
     result = analyze_resume(text)
     if not result:
-        print("❌ AI analysis failed")
+        print("AI analysis failed")
         return None
 
     # Determine candidate ID
@@ -130,7 +128,7 @@ def parse_resume(pdf_path, candidate_id=None):
 
     # Save result
     save_candidate(result, candidate_id)
-    print(f"✅ Resume analysis complete for: {result.get('name', candidate_id)}")
+    print(f"Resume analysis complete for: {result.get('name', candidate_id)}")
 
     return result
 

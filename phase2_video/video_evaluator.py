@@ -10,6 +10,7 @@ import os
 import subprocess
 import shutil
 from dotenv import load_dotenv
+from utils.helpers import safe_json_parse, save_json
 
 load_dotenv()
 
@@ -134,8 +135,7 @@ Transcript:
             temperature=0.3
         )
         raw = response.choices[0].message.content.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        return json.loads(raw)
+        return safe_json_parse(raw)
 
     except json.JSONDecodeError as e:
         print(f"Error parsing AI response: {e}")
@@ -162,8 +162,7 @@ def save_video_result(result, transcript, candidate_id):
         "evaluation": result
     }
     path = f"output/{candidate_id}_video.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(full_result, f, indent=2, ensure_ascii=False)
+    save_json(full_result, path)
     print(f"Video evaluation saved to {path}")
     return full_result
 

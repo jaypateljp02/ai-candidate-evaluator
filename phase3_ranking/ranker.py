@@ -16,6 +16,7 @@ from phase3_ranking.clustering import (
     cluster_candidates, get_cluster_summary,
     TIER_EMOJIS, TIER_COLORS
 )
+from utils.helpers import load_json
 
 
 # ──────────────────────────────────────────────
@@ -44,8 +45,7 @@ def load_all_candidates(output_dir="output"):
             video_path = os.path.join(output_dir, f"{candidate_id}_video.json")
 
             try:
-                with open(resume_path, encoding="utf-8") as f:
-                    resume_data = json.load(f)
+                resume_data = load_json(resume_path)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading {resume_path}: {e}")
                 continue
@@ -53,8 +53,7 @@ def load_all_candidates(output_dir="output"):
             video_data = None
             if os.path.exists(video_path):
                 try:
-                    with open(video_path, encoding="utf-8") as f:
-                        video_data = json.load(f)
+                    video_data = load_json(video_path)
                 except (json.JSONDecodeError, IOError) as e:
                     print(f"Error loading {video_path}: {e}")
 
