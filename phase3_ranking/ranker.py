@@ -34,7 +34,7 @@ def load_all_candidates(output_dir="output"):
     candidates = {}
 
     if not os.path.exists(output_dir):
-        print("⚠️ Output directory not found")
+        print("Warning: Output directory not found")
         return candidates
 
     for file in os.listdir(output_dir):
@@ -47,7 +47,7 @@ def load_all_candidates(output_dir="output"):
                 with open(resume_path, encoding="utf-8") as f:
                     resume_data = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                print(f"⚠️ Error loading {resume_path}: {e}")
+                print(f"Error loading {resume_path}: {e}")
                 continue
 
             video_data = None
@@ -56,14 +56,14 @@ def load_all_candidates(output_dir="output"):
                     with open(video_path, encoding="utf-8") as f:
                         video_data = json.load(f)
                 except (json.JSONDecodeError, IOError) as e:
-                    print(f"⚠️ Error loading {video_path}: {e}")
+                    print(f"Error loading {video_path}: {e}")
 
             candidates[candidate_id] = {
                 "resume": resume_data,
                 "video": video_data
             }
 
-    print(f"📊 Loaded {len(candidates)} candidate(s)")
+    print(f"Loaded {len(candidates)} candidate(s)")
     return candidates
 
 
@@ -190,7 +190,7 @@ class CandidateReportPDF(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 10)
         self.set_text_color(120, 120, 120)
-        self.cell(0, 8, "AI Candidate Evaluator - Confidential Report", align="R", ln=True)
+        self.cell(0, 8, "AI Candidate Evaluator — Confidential Report", align="R", ln=True)
         self.line(10, self.get_y(), 200, self.get_y())
         self.ln(3)
 
@@ -284,7 +284,7 @@ def generate_pdf_report(ranked_candidates):
         pdf.set_font("Helvetica", size=10)
         pdf.set_text_color(0, 0, 0)
         for tier, stats in cluster_summary.items():
-            pdf.cell(0, 7, f"{tier}: {stats['count']} candidate(s) - Avg Score: {stats['avg_final']}/100", ln=True)
+            pdf.cell(0, 7, f"{tier}: {stats['count']} candidate(s) — Avg Score: {stats['avg_final']}/100", ln=True)
         pdf.ln(5)
 
     # ── Detailed Candidate Sections ──
@@ -393,7 +393,7 @@ def generate_pdf_report(ranked_candidates):
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
 
     pdf.output(report_path)
-    print(f"📄 Report saved to {report_path}")
+    print(f"Report saved to {report_path}")
     return report_path
 
 
@@ -407,18 +407,18 @@ def run_ranking():
     candidates = load_all_candidates()
 
     if not candidates:
-        print("❌ No candidates found in output folder!")
+        print("No candidates found in output folder!")
         return
 
     ranked = rank_candidates(candidates)
 
-    print("\n🏆 === FINAL RANKINGS ===")
+    print("\n=== FINAL RANKINGS ===")
     for c in ranked:
         tier_emoji = TIER_EMOJIS.get(c.get('tier', ''), '⚪')
-        print(f"  #{c['rank']} | {c['name']} | {c['final_score']}/100 | {tier_emoji} {c.get('tier', 'N/A')}")
+        print(f"  #{c['rank']} | {c['name']} | {c['final_score']}/100 | {c.get('tier', 'N/A')}")
 
     report_path = generate_pdf_report(ranked)
-    print(f"\n✅ Done! Report at: {report_path}")
+    print(f"\nDone! Report at: {report_path}")
 
 
 if __name__ == "__main__":
