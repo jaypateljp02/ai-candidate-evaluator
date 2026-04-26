@@ -1,9 +1,41 @@
+# Environment variables
 .env
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
 temp_audio.wav
+*.tmp
+
+# User data (resumes and videos are private)
 data/resumes/*.pdf
 data/videos/*.mp4
+data/videos/*.avi
+data/videos/*.mov
+
+# Output files (generated at runtime)
 output/*.json
 output/reports/*.pdf
-.gitkeep
