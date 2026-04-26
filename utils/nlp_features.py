@@ -9,21 +9,20 @@ import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# Download VADER lexicon (one-time, silent)
-try:
-    nltk.data.find("sentiment/vader_lexicon.zip")
-except LookupError:
-    nltk.download("vader_lexicon", quiet=True)
-
-try:
-    nltk.data.find("tokenizers/punkt_tab")
-except LookupError:
-    nltk.download("punkt_tab", quiet=True)
-
-try:
-    nltk.data.find("corpora/stopwords")
-except LookupError:
-    nltk.download("stopwords", quiet=True)
+def _ensure_nltk_data():
+    """Download NLTK data if missing."""
+    try:
+        nltk.data.find("sentiment/vader_lexicon.zip")
+    except LookupError:
+        nltk.download("vader_lexicon", quiet=True)
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+    except LookupError:
+        nltk.download("punkt_tab", quiet=True)
+    try:
+        nltk.data.find("corpora/stopwords")
+    except LookupError:
+        nltk.download("stopwords", quiet=True)
 
 
 def extract_keywords_tfidf(text, top_n=10):
@@ -39,6 +38,7 @@ def extract_keywords_tfidf(text, top_n=10):
     Returns:
         list: Top keywords sorted by importance, e.g. ["Python", "React", "ML"]
     """
+    _ensure_nltk_data()
     if not text or len(text.strip()) < 20:
         return []
 

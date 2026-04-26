@@ -12,8 +12,7 @@ import sys
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import plotly.express as px
-import pandas as pd
+
 
 from phase1_resume.resume_parser import parse_resume
 from phase2_video.video_evaluator import evaluate_video
@@ -489,33 +488,6 @@ elif page == "🏆 All Rankings":
                 <div style="font-size: 1.2em; font-weight: 700; margin-top: 8px;">{tier_text}</div>
             </div>
             """, unsafe_allow_html=True)
-
-        # Cluster scatter chart (only if 2+ candidates)
-        if len(ranked) >= 2:
-            st.markdown("### 📊 Candidate Clusters (K-Means)")
-            chart_data = pd.DataFrame([{
-                "Name": c["name"],
-                "Resume Score": c["resume_score"],
-                "Video Score": c["video_score"],
-                "Final Score": c["final_score"],
-                "Tier": c.get("tier", "N/A"),
-                "Experience": c.get("experience_years", 0)
-            } for c in ranked])
-
-            fig = px.scatter(
-                chart_data, x="Resume Score", y="Video Score",
-                color="Tier", size="Final Score",
-                hover_name="Name", hover_data=["Experience", "Final Score"],
-                color_discrete_map=TIER_COLORS,
-                template="plotly_dark"
-            )
-            fig.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font_color="white",
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("")
 

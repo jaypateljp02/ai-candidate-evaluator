@@ -4,7 +4,6 @@ Extracts audio from video, transcribes with Whisper, and evaluates communication
 skills using Groq LLaMA AI.
 """
 
-import whisper
 from groq import Groq
 import json
 import os
@@ -44,7 +43,7 @@ def extract_audio(video_path, audio_output="temp_audio.wav"):
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
 
-    print("🎬 Extracting audio from video...")
+    print("Extracting audio from video...")
     command = [
         "ffmpeg", "-i", video_path,
         "-ar", "16000",    # 16kHz sample rate (optimal for Whisper)
@@ -61,7 +60,7 @@ def extract_audio(video_path, audio_output="temp_audio.wav"):
     if result.returncode != 0:
         raise RuntimeError("FFmpeg failed to extract audio from video")
 
-    print(f"✅ Audio extracted to {audio_output}")
+    print(f"Audio extracted to {audio_output}")
     return audio_output
 
 
@@ -74,16 +73,17 @@ def transcribe_audio(audio_path):
     Returns:
         str: Transcribed text
     """
-    print("🎤 Transcribing audio with Whisper...")
+    print("Transcribing audio with Whisper...")
+    import whisper
 
     try:
         model = whisper.load_model("base")
         result = model.transcribe(audio_path)
         transcript = result["text"].strip()
-        print(f"📝 Transcript length: {len(transcript)} characters")
+        print(f"Transcript length: {len(transcript)} characters")
         return transcript
     except Exception as e:
-        print(f"❌ Whisper transcription error: {e}")
+        print(f"Whisper transcription error: {e}")
         return ""
 
 
@@ -138,7 +138,7 @@ Transcript:
         return json.loads(raw)
 
     except json.JSONDecodeError as e:
-        print(f"❌ Error parsing AI response: {e}")
+        print(f"Error parsing AI response: {e}")
         return {
             "communication_score": 0,
             "confidence": "Error",
@@ -149,7 +149,7 @@ Transcript:
             "summary": "Error during AI analysis"
         }
     except Exception as e:
-        print(f"❌ Error during transcript analysis: {e}")
+        print(f"Error during transcript analysis: {e}")
         return None
 
 
@@ -164,7 +164,7 @@ def save_video_result(result, transcript, candidate_id):
     path = f"output/{candidate_id}_video.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(full_result, f, indent=2, ensure_ascii=False)
-    print(f"✅ Video evaluation saved to {path}")
+    print(f"Video evaluation saved to {path}")
     return full_result
 
 
@@ -180,7 +180,7 @@ def evaluate_video(video_path, candidate_id="candidate"):
     Returns:
         dict: Complete evaluation with transcript and scores
     """
-    print(f"🎥 Evaluating video: {video_path}")
+    print(f"Evaluating video: {video_path}")
 
     # Step 1 — Extract audio
     audio_path = extract_audio(video_path)
@@ -197,9 +197,9 @@ def evaluate_video(video_path, candidate_id="candidate"):
     # Cleanup temporary audio file
     if os.path.exists(audio_path):
         os.remove(audio_path)
-        print("🗑️ Temporary audio file cleaned up")
+        print("Temporary audio file cleaned up")
 
-    print(f"✅ Video evaluation complete for: {candidate_id}")
+    print(f"Video evaluation complete for: {candidate_id}")
     return full_result
 
 
