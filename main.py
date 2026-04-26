@@ -217,6 +217,32 @@ if page == "🏠 Home":
     st.markdown('<div class="hero-subtitle">Automate your hiring pipeline with AI-powered resume analysis, video interview evaluation, and intelligent candidate ranking</div>', unsafe_allow_html=True)
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card" style="text-align: center;">
+            <div style="font-size: 2.5em; font-weight: 800; color: #3498db;">{count_candidates()}</div>
+            <div style="color: rgba(255,255,255,0.6); margin-top: 5px;">Total Candidates Evaluated</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        avg_score = 0
+        if count_candidates() > 0:
+            candidates = load_all_candidates()
+            if candidates:
+                ranked = rank_candidates(candidates)
+                avg_score = int(sum(c['final_score'] for c in ranked) / len(ranked))
+                
+        st.markdown(f"""
+        <div class="metric-card" style="text-align: center;">
+            <div style="font-size: 2.5em; font-weight: 800; color: #2ecc71;">{avg_score}<span style="font-size: 0.5em;">/100</span></div>
+            <div style="color: rgba(255,255,255,0.6); margin-top: 5px;">Average Candidate Score</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
