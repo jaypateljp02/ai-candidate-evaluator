@@ -1,12 +1,32 @@
-pdfplumber
-groq
-openai-whisper
-moviepy
-pandas
-numpy
-scikit-learn
-nltk
-fpdf2
-streamlit
-python-dotenv
-plotly
+# ============================================
+# AI Candidate Evaluator — Requirements
+# ============================================
+# Install: pip install -r requirements.txt
+# Python:  3.10+
+# ============================================
+
+# ── Core AI & LLM ──
+groq>=1.0.0                 # Groq API client for LLaMA inference
+openai-whisper>=20231117     # OpenAI Whisper for speech-to-text
+
+# ── PDF Processing ──
+pdfplumber>=0.10.0           # Extract text from PDF resumes
+fpdf2>=2.7.0                 # Generate PDF evaluation reports
+
+# ── Data & ML ──
+pandas>=2.0.0                # Data manipulation
+numpy>=1.24.0                # Numerical computing
+scikit-learn>=1.3.0          # K-Means clustering & TF-IDF
+
+# ── NLP ──
+nltk>=3.8.0                  # VADER sentiment analysis & tokenization
+
+# ── Video Processing ──
+moviepy>=1.0.3               # Video/audio processing (FFmpeg wrapper)
+
+# ── Web UI ──
+streamlit>=1.28.0            # Web application framework
+plotly>=5.18.0               # Interactive charts (optional)
+
+# ── Utilities ──
+python-dotenv>=1.0.0         # Load .env environment variables

@@ -1,7 +1,11 @@
-# Environment variables
+# ============================================
+# AI Candidate Evaluator — .gitignore
+# ============================================
+
+# ── Environment variables (contains API keys) ──
 .env
 
-# Python
+# ── Python ──
 __pycache__/
 *.pyc
 *.pyo
@@ -11,31 +15,32 @@ dist/
 build/
 *.egg
 
-# Virtual environment
+# ── Virtual environment ──
 venv/
 env/
 .venv/
 
-# IDE
+# ── IDE ──
 .vscode/
 .idea/
 *.swp
 *.swo
+.devcontainer/
 
-# OS
+# ── OS ──
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# ── Temporary files ──
 temp_audio.wav
 *.tmp
 
-# User data (resumes and videos are private)
+# ── User data (resumes and videos are private) ──
 data/resumes/*.pdf
 data/videos/*.mp4
 data/videos/*.avi
 data/videos/*.mov
 
-# Output files (generated at runtime)
+# ── Output files (generated at runtime) ──
 output/*.json
 output/reports/*.pdf
